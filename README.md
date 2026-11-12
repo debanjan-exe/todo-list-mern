@@ -373,7 +373,7 @@ Open http://localhost:5173 and use the browser's mobile view (DevTools → devic
 
 ### b) API – Render
 1. **New → Web Service**, then connect the GitHub repo.
-2. Root directory: `server`. Build: `pnpm install`. Start: `pnpm start`.
+2. Root directory: `server`. Build: `npm install -g pnpm && pnpm install --frozen-lockfile --prod`. Start: `pnpm start`.
 3. Environment: `MONGO_URI=...`, `JWT_SECRET=<long random string>`, `CLIENT_URL=<Netlify URL>` (or `*`). For a public demo keep `TEST_USER_ENABLED=true`; for real users set it to `false`.
 4. Copy the service URL, for example `https://todo-api.onrender.com`.
 5. Health check path for Render: `/api/health`.
