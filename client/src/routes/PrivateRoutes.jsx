@@ -3,7 +3,10 @@
 // and all task state is cleared on sign out.
 // Any other URL (for example /signin) goes to Home.
 // The bottom navigation bar is shown on every private page.
+// /oauth/authorize (Claude "Connect") is a full page with no bottom bar.
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { getPendingOAuth } from '../api';
+import OAuthConsent from '../pages/OAuthConsent';
 import { Snackbar, Alert } from '@mui/material';
 import { TaskProvider, useTasks } from '../context/TaskContext';
 import TaskSheet from '../components/TaskSheet';
@@ -34,7 +37,22 @@ function SharedOverlays() {
   );
 }
 
+// After sign in: open the waiting OAuth request (if any), else Home
+function AfterSignIn() {
+  const pending = getPendingOAuth(); // cleared by the consent page
+  return <Navigate to={pending !== null ? `/oauth/authorize?${pending}` : '/home'} replace />;
+}
+
 export default function PrivateRoutes() {
+  return (
+    <Routes>
+      <Route path="/oauth/authorize" element={<OAuthConsent />} />
+      <Route path="*" element={<MainApp />} />
+    </Routes>
+  );
+}
+
+function MainApp() {
   return (
     <TaskProvider>
       <Routes>
@@ -42,7 +60,7 @@ export default function PrivateRoutes() {
         <Route path="/weeks" element={<Weeks />} />
         <Route path="/search" element={<Search />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="*" element={<Navigate to="/home" replace />} />
+        <Route path="*" element={<AfterSignIn />} />
       </Routes>
       <BottomNav />
       <SharedOverlays />

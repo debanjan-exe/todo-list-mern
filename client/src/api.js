@@ -79,3 +79,15 @@ export const revokeAccessToken = (id) => request(`/tokens/${id}`, { method: 'DEL
 
 // MCP address = API address without "/api" + "/mcp"
 export const MCP_URL = BASE_URL.replace(/\/api\/?$/, '') + '/mcp';
+
+// ---- OAuth consent ("Connect" in Claude) ----
+// The query is the same one Claude sent to /oauth/authorize.
+export const getOAuthConsentInfo = (query) => request(`/oauth/authorize/info?${query}`);
+export const approveOAuth = (query) =>
+  request('/oauth/authorize', { method: 'POST', body: JSON.stringify(Object.fromEntries(new URLSearchParams(query))) });
+
+// A signed-out user opens the consent page -> keep the request, sign in, then come back
+const OAUTH_KEY = 'todo_oauth_request';
+export const savePendingOAuth = (query) => sessionStorage.setItem(OAUTH_KEY, query);
+export const getPendingOAuth = () => sessionStorage.getItem(OAUTH_KEY);
+export const clearPendingOAuth = () => sessionStorage.removeItem(OAUTH_KEY);

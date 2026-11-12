@@ -97,6 +97,19 @@ Error in any layer → errorHandler → 400 / 401 / 404 / 409 / 500
 - `data/taskData.js` adds `isDeleted: false` to every query.
 - To see deleted tasks: `mongosh todo-app --eval 'db.tasks.find({ isDeleted: true })'`
 
+## OAuth (one-click Connect from Claude)
+
+`services/oauthService.js`, `controllers/oauthController.js`, `routes/oauthRoutes.js`. A simple version of Retainia's MCP OAuth:
+
+1. `/mcp` without a token → 401 with `WWW-Authenticate: Bearer resource_metadata=".../.well-known/oauth-protected-resource"`.
+2. Claude reads `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`.
+3. `POST /oauth/register` → `client_id` = signed JWT (name + redirect URIs). Only `claude.ai`, `claude.com`, `localhost` (+ `OAUTH_REDIRECT_HOSTS`).
+4. `GET /oauth/authorize` → checks client, redirect URI, PKCE S256 → 302 to `APP_URL/oauth/authorize?<same query>`.
+5. The app's consent page (signed in) → `POST /api/oauth/authorize` → redirect URL with a one-time code (JWT, 5 min).
+6. `POST /oauth/token` (form) → checks code, client, redirect URI, PKCE → `access_token` = a personal access token (`oauthClient` set, one per app).
+
+OAuth JWTs use `JWT_SECRET + ":oauth"`, so they never work as a sign-in session. `trust proxy` is on, so URLs are `https` on Render.
+
 ## MCP server (`POST /mcp`)
 
 - `routes/mcpRoutes.js` → `controllers/mcpController.js` → `mcp/createMcpServer.js` → `mcp/tools.js`.
@@ -107,7 +120,7 @@ Error in any layer → errorHandler → 400 / 401 / 404 / 409 / 500
 
 ## Tests
 
-`pnpm test` → 49 tests (Vitest). No database is needed.
+`pnpm test` → 55 tests (Vitest). No database is needed.
 
 ### Unit (`tests/unit/`, 40 tests)
 
@@ -117,7 +130,11 @@ Each file mocks the layer below with `vi.mock(...)`. Each test file mocks the la
 - `healthService.test.js`: `config/db.js` and the data layer are mocked → up / down / warn cases.
 - `middleware.test.js`: `requireAuth` and `errorHandler` are called with fake `req` / `res` / `next`.
 
-### Integration (`tests/integration/mcp.test.js`, 9 tests)
+### Integration (`tests/integration/`, 15 tests)
+
+`oauth.test.js` (6): the full one-click Connect flow, like Claude does it.
+
+`mcp.test.js` (9):
 
 Starts the **real Express app** on a free port and talks to it with `fetch` and the official **MCP SDK client** (`StreamableHTTPClientTransport`). Only the data layer is replaced by `tests/helpers/memoryData.js` (in-memory users, tasks, tokens with the same rules). Checks access tokens (hash only, 403 for token management, revoke), `/mcp` 401 without a token, the tool list, a full create → list → complete → search → summary → delete flow, tool errors and user isolation.
 
@@ -140,7 +157,14 @@ Starts the **real Express app** on a free port and talks to it with `fetch` and 
 | GET | `/api/tokens` | session JWT | 200 list (no full token) | 401, 403 |
 | POST | `/api/tokens` | session JWT | 201 `{ ..., token }` (shown once) | 400, 401, 403 |
 | DELETE | `/api/tokens/:id` | session JWT | 200 `{ message }` (soft delete) | 401, 403, 404 |
-| POST | `/mcp` | token or access token | MCP JSON-RPC answer | 401 |
+| GET | `/.well-known/oauth-protected-resource[/mcp]` | – | 200 metadata | – |
+| GET | `/.well-known/oauth-authorization-server` | – | 200 metadata | – |
+| POST | `/oauth/register` | – | 201 `{ client_id, ... }` | 400 |
+| GET | `/oauth/authorize` | – | 302 to the consent page | 400 |
+| POST | `/oauth/token` | – | 200 `{ access_token, token_type }` | 400 |
+| GET | `/api/oauth/authorize/info` | session JWT | 200 `{ clientName, denyUrl }` | 400, 401, 403 |
+| POST | `/api/oauth/authorize` | session JWT | 200 `{ redirectUrl }` | 400, 401, 403 |
+| POST | `/mcp` | token or access token | MCP JSON-RPC answer | 401 (+ `WWW-Authenticate`) |
 | GET / DELETE | `/mcp` | token | – | 405 |
 | GET | `/api/health` | – | 200 all OK | 503 something down |
 | GET | `/api/auth/test-user` | – | 200 `{ email, password }` | 404 turned off |

@@ -1,5 +1,6 @@
 // Central error handler. Every error from routes, controllers and services ends here.
 // It turns the error into the right HTTP status and a JSON message.
+import { baseUrl } from '../controllers/oauthController.js';
 export default function errorHandler(err, req, res, next) {
   // Mongoose schema rule failed (for example, a missing title) -> 400 Bad Request
   if (err.name === 'ValidationError') {
@@ -13,6 +14,11 @@ export default function errorHandler(err, req, res, next) {
 
   // Our own errors (NotFoundError, HttpError) and bad JSON bodies have a status
   const status = err.status || 500;
+
+  // /mcp without a valid token: tell Claude where to sign in (OAuth discovery, RFC 9728)
+  if (status === 401 && req.originalUrl.startsWith('/mcp')) {
+    res.set('WWW-Authenticate', `Bearer resource_metadata="${baseUrl(req)}/.well-known/oauth-protected-resource"`);
+  }
   if (status >= 500) console.error(err); // log only real server errors
   res.status(status).json({ message: status >= 500 ? 'Server error' : err.message });
 }

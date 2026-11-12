@@ -1,7 +1,7 @@
 // "Connect to Claude" bottom drawer.
-// 1. Make a personal access token (shown ONE time, with a copy button).
-// 2. Copy a setup snippet (Claude Code / Claude Desktop / other MCP client).
-// 3. See the tokens and revoke one (soft delete: it stops working at once).
+//   Claude app / Claude Code: add the server URL, click Connect, sign in, Allow (OAuth). No token to copy.
+//   Other clients: make a personal access token (shown ONE time) and copy a setup snippet.
+//   "Connected apps and tokens": revoke one (soft delete: it stops working at once).
 import { useEffect, useState } from 'react';
 import {
   Drawer, Box, Typography, IconButton, TextField, Button, CircularProgress, Tabs, Tab, Skeleton,
@@ -15,7 +15,10 @@ import { colors } from '../theme';
 const MAX_NAME = 40; // same rule as the server
 const TOKEN_HINT = '<your-token>';
 
-// Setup text for each client. The token goes in the Authorization header.
+// One-click setup (OAuth): Claude asks you to sign in and tap Allow
+export const CLAUDE_CODE_COMMAND = `claude mcp add --transport http todo ${MCP_URL}`;
+
+// Setup text with a token (for clients without OAuth). The token goes in the Authorization header.
 export function setupSnippets(token = TOKEN_HINT) {
   return {
     'Claude Code': `claude mcp add --transport http todo ${MCP_URL} --header "Authorization: Bearer ${token}"`,
@@ -57,6 +60,7 @@ export default function ConnectClaudeDrawer({ open, onClose }) {
   const [creating, setCreating] = useState(false);
   const [newToken, setNewToken] = useState(''); // full token, shown one time
   const [client, setClient] = useState('Claude Code');
+  const [mode, setMode] = useState('oauth'); // oauth | token
 
   // Load the list each time the drawer opens. Forget the last new token.
   useEffect(() => {
@@ -122,57 +126,84 @@ export default function ConnectClaudeDrawer({ open, onClose }) {
           </IconButton>
         </Box>
         <Typography sx={{ fontSize: 12, color: '#6B6B70', mt: 0.5 }}>
-          Let Claude (or another MCP client) read and change your tasks. Make a token, then add the server to your client.
+          Let Claude (or another MCP client) read and change your tasks.
         </Typography>
 
-        {/* Step 1: token */}
-        <Heading>1. Make a token</Heading>
-        {newToken ? (
+        <Tabs value={mode} onChange={(e, v) => setMode(v)} variant="fullWidth"
+          sx={{ minHeight: 36, mt: 2, '& .MuiTab-root': { minHeight: 36, fontSize: 12, textTransform: 'none' } }}>
+          <Tab value="oauth" label="Claude (one click)" />
+          <Tab value="token" label="With a token" />
+        </Tabs>
+
+        {mode === 'oauth' ? (
           <>
-            <Typography sx={{ fontSize: 11, color: colors.pendingIcon, mb: 1 }}>
-              Copy this token now. You will not see it again.
+            {/* OAuth: no token to copy */}
+            <Heading>Claude app (web or desktop)</Heading>
+            <Typography component="ol" sx={{ fontSize: 12, color: '#6B6B70', pl: 2.5, m: 0, '& li': { mb: 0.5 } }}>
+              <li>Open <b>Settings → Connectors → Add custom connector</b>.</li>
+              <li>Name: <b>To-Do List</b>. MCP server URL: the URL below.</li>
+              <li>Click <b>Connect</b>, sign in here if asked, and tap <b>Allow</b>.</li>
             </Typography>
-            <CodeBox text={newToken} label="Token" onCopy={copy} />
+            <Box sx={{ mt: 1 }}><CodeBox text={MCP_URL} label="Server URL" onCopy={copy} /></Box>
+
+            <Heading>Claude Code</Heading>
+            <CodeBox text={CLAUDE_CODE_COMMAND} label="Command" onCopy={copy} />
+            <Typography sx={{ fontSize: 11, color: colors.muted, mt: 0.75 }}>
+              Then type <b>/mcp</b> in Claude Code, choose <b>todo</b> and sign in.
+            </Typography>
           </>
         ) : (
-          <Box component="form" noValidate onSubmit={(e) => { e.preventDefault(); handleCreate(); }} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-            <TextField fullWidth size="small" value={name} placeholder="Token name, for example Claude Desktop"
-              onChange={(e) => { setName(e.target.value); setError(''); }}
-              error={!!error} helperText={error || ' '}
-              inputProps={{ 'aria-label': 'Token name', maxLength: MAX_NAME + 10 }}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '2px', fontSize: 13 } }} />
-            <Button type="submit" variant="contained" disableElevation disabled={creating}
-              sx={{ borderRadius: '2px', fontSize: 13, height: 40, minWidth: 96,
-                '&.Mui-disabled': { bgcolor: colors.primary, color: '#fff', opacity: 0.8 } }}>
-              {creating ? <CircularProgress size={18} color="inherit" /> : 'Create'}
-            </Button>
-          </Box>
+          <>
+            {/* Step 1: token */}
+            <Heading>1. Make a token</Heading>
+            {newToken ? (
+              <>
+                <Typography sx={{ fontSize: 11, color: colors.pendingIcon, mb: 1 }}>
+                  Copy this token now. You will not see it again.
+                </Typography>
+                <CodeBox text={newToken} label="Token" onCopy={copy} />
+              </>
+            ) : (
+              <Box component="form" noValidate onSubmit={(e) => { e.preventDefault(); handleCreate(); }} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                <TextField fullWidth size="small" value={name} placeholder="Token name, for example Claude Desktop"
+                  onChange={(e) => { setName(e.target.value); setError(''); }}
+                  error={!!error} helperText={error || ' '}
+                  inputProps={{ 'aria-label': 'Token name', maxLength: MAX_NAME + 10 }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '2px', fontSize: 13 } }} />
+                <Button type="submit" variant="contained" disableElevation disabled={creating}
+                  sx={{ borderRadius: '2px', fontSize: 13, height: 40, minWidth: 96,
+                    '&.Mui-disabled': { bgcolor: colors.primary, color: '#fff', opacity: 0.8 } }}>
+                  {creating ? <CircularProgress size={18} color="inherit" /> : 'Create'}
+                </Button>
+              </Box>
+            )}
+
+            {/* Step 2: setup snippet */}
+            <Heading>2. Add the server</Heading>
+            <Tabs value={client} onChange={(e, v) => setClient(v)} variant="fullWidth"
+              sx={{ minHeight: 36, mb: 1, '& .MuiTab-root': { minHeight: 36, fontSize: 12, textTransform: 'none' } }}>
+              {Object.keys(setupSnippets()).map((c) => <Tab key={c} value={c} label={c} />)}
+            </Tabs>
+            <CodeBox text={snippet} label="Setup" onCopy={copy} />
+            <Typography sx={{ fontSize: 11, color: colors.muted, mt: 0.75 }}>
+              Server URL: {MCP_URL}
+            </Typography>
+          </>
         )}
 
-        {/* Step 2: setup snippet */}
-        <Heading>2. Add the server</Heading>
-        <Tabs value={client} onChange={(e, v) => setClient(v)} variant="fullWidth"
-          sx={{ minHeight: 36, mb: 1, '& .MuiTab-root': { minHeight: 36, fontSize: 12, textTransform: 'none' } }}>
-          {Object.keys(setupSnippets()).map((c) => <Tab key={c} value={c} label={c} />)}
-        </Tabs>
-        <CodeBox text={snippet} label="Setup" onCopy={copy} />
-        <Typography sx={{ fontSize: 11, color: colors.muted, mt: 0.75 }}>
-          Server URL: {MCP_URL}
-        </Typography>
-
         {/* Step 3: list + revoke */}
-        <Heading>Your tokens</Heading>
+        <Heading>Connected apps and tokens</Heading>
         {tokens === null ? (
           <Skeleton variant="rectangular" height={48} sx={{ borderRadius: '2px' }} />
         ) : tokens.length === 0 ? (
-          <Typography sx={{ fontSize: 12, color: colors.muted }}>No tokens yet.</Typography>
+          <Typography sx={{ fontSize: 12, color: colors.muted }}>Nothing connected yet.</Typography>
         ) : (
           tokens.map((t) => (
             <Box key={t.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1, borderBottom: `1px solid ${colors.border}` }}>
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography noWrap sx={{ fontSize: 13, fontWeight: 500 }}>{t.name}</Typography>
                 <Typography noWrap sx={{ fontSize: 11, color: colors.muted }}>
-                  {t.prefix}… · Last used: {formatDate(t.lastUsedAt)}
+                  {t.viaOAuth ? 'Connected app' : `${t.prefix}…`} · Last used: {formatDate(t.lastUsedAt)}
                 </Typography>
               </Box>
               <Button size="small" color="error" onClick={() => handleRevoke(t)} sx={{ fontSize: 12, textTransform: 'none' }}>

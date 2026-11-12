@@ -25,6 +25,7 @@ const publicToken = (t) => ({
   prefix: t.prefix,
   lastUsedAt: t.lastUsedAt,
   createdAt: t.createdAt,
+  viaOAuth: !!t.oauthClient, // made by "Connect" in Claude (OAuth), not by hand
 });
 
 export async function createToken(userId, { name = '' } = {}) {
@@ -35,14 +36,26 @@ export async function createToken(userId, { name = '' } = {}) {
     throw new BadRequestError(`You can have at most ${MAX_TOKENS} tokens. Revoke one first.`);
   }
 
+  return saveNewToken(userId, { name: clean });
+}
+
+// Makes the random token, saves only its hash, returns the full token ONE time
+async function saveNewToken(userId, extra) {
   const token = TOKEN_PREFIX + crypto.randomBytes(32).toString('base64url'); // 256 random bits
   const saved = await tokenData.insertToken({
     user: userId,
-    name: clean,
     tokenHash: hashToken(token),
     prefix: token.slice(0, TOKEN_PREFIX.length + 6),
+    ...extra,
   });
   return { ...publicToken(saved), token }; // the ONLY time the full token is returned
+}
+
+// OAuth ("Connect" in Claude): one token per app. Connecting again replaces the old token,
+// so this does not count toward the 10-token limit.
+export async function createOAuthToken(userId, { name, oauthClient }) {
+  await tokenData.markClientTokensRevoked(userId, oauthClient);
+  return saveNewToken(userId, { name: String(name).slice(0, MAX_NAME), oauthClient });
 }
 
 export async function listTokens(userId) {

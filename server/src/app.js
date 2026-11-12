@@ -10,10 +10,16 @@ import authRoutes from './routes/authRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import tokenRoutes from './routes/tokenRoutes.js';
 import mcpRoutes from './routes/mcpRoutes.js';
+import { publicOAuthRoutes, appOAuthRoutes } from './routes/oauthRoutes.js';
 import requireAuth from './middleware/auth.js';
 import errorHandler from './middleware/errorHandler.js';
 
 const app = express();
+app.set('trust proxy', 1); // behind Render's proxy: req.protocol is https (used in OAuth URLs)
+
+// Public OAuth for Claude ("Connect" button). Before the CORS rule below,
+// because these endpoints allow ANY origin.
+app.use(publicOAuthRoutes);
 
 // Middlewares
 app.use(cors({ origin: process.env.CLIENT_URL || '*' })); // allow the React app to call us
@@ -33,6 +39,9 @@ app.use('/api/tasks', requireAuth, taskRoutes);
 
 // Private: personal access tokens for MCP clients (managed from the app)
 app.use('/api/tokens', requireAuth, tokenRoutes);
+
+// Private: the app's consent page approves an OAuth request ("Allow")
+app.use('/api/oauth', requireAuth, appOAuthRoutes);
 
 // MCP endpoint for AI clients such as Claude (Bearer personal access token)
 app.use('/mcp', requireAuth, mcpRoutes);

@@ -46,7 +46,7 @@ src/
     │   └── SplashLogo.jsx   # animated logo (tick draws itself, pulse ring)
     ├── ErrorBoundary.jsx    # class component: catches crashes → SomethingWentWrong
     ├── EditProfileDrawer.jsx# edit name; email disabled
-    ├── ConnectClaudeDrawer.jsx # Profile → Connect to Claude: make / list / revoke access tokens, MCP setup snippets
+    ├── ConnectClaudeDrawer.jsx # Profile → Connect to Claude: one-click (OAuth) setup, tokens, revoke
     ├── AuthLayout.jsx       # Sign In / Sign Up layout + AuthField (show/hide password)
     ├── BottomNav.jsx        # Home · Weeks · Search · Profile (tab follows the URL)
     ├── AddFab.jsx           # "+" button above the bottom nav
@@ -75,6 +75,11 @@ src/
 4. Any `401` from the API (for example, an expired token) signs the user out.
 5. Sign out (Profile, with confirm) removes the token. `TaskProvider` unmounts, so no tasks stay in memory.
 
+## OAuth consent page (`/oauth/authorize`)
+
+Claude sends the browser here when the user clicks **Connect**. `pages/OAuthConsent.jsx` shows "Claude wants to access your To-Do List", the account, and **Cancel / Allow**. Allow → `POST /api/oauth/authorize` → the browser goes back to Claude with the code.
+Signed out: `PublicRoutes` saves the request in `sessionStorage` (`todo_oauth_request`) and opens Sign In. After sign in, `PrivateRoutes` opens the consent page again. The page has no bottom bar.
+
 ## Shared actions
 
 | From | Action | What it does |
@@ -92,7 +97,7 @@ src/
 tests/
 ├── setup.js                 # jest-dom matchers + cleanup (page, localStorage, sessionStorage) after each test
 ├── renderWithProviders.jsx  # render with the MUI theme + MemoryRouter, like the real app
-└── unit/                    # dateUtils, api, SignIn, SignUp, ServerGate, ErrorBoundary, WeekStrip, ConnectClaudeDrawer (45 tests)
+└── unit/                    # dateUtils, api, SignIn, SignUp, ServerGate, ErrorBoundary, WeekStrip, ConnectClaudeDrawer, OAuthConsent (51 tests)
 ```
 
 - Tests run in **jsdom** (a fake browser), set in `vite.config.js` → `test`.

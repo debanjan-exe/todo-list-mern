@@ -35,6 +35,7 @@ describe('ConnectClaudeDrawer', () => {
     createAccessToken.mockResolvedValue({ ...saved, id: 't2', name: 'Claude', token: 'todo_pat_FULLSECRET' });
     renderWithProviders(<ConnectClaudeDrawer open onClose={() => {}} />);
 
+    await userEvent.click(screen.getByRole('tab', { name: 'With a token' }));
     await userEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(createAccessToken).toHaveBeenCalledWith('Claude');
@@ -45,6 +46,7 @@ describe('ConnectClaudeDrawer', () => {
 
   it('shows an error and does not call the API for an empty name', async () => {
     renderWithProviders(<ConnectClaudeDrawer open onClose={() => {}} />);
+    await userEvent.click(screen.getByRole('tab', { name: 'With a token' }));
     await userEvent.clear(screen.getByLabelText('Token name'));
     await userEvent.click(screen.getByRole('button', { name: 'Create' }));
     expect(screen.getByText('Name is required')).toBeInTheDocument();
@@ -64,6 +66,15 @@ describe('ConnectClaudeDrawer', () => {
     await waitFor(() => expect(revokeAccessToken).toHaveBeenCalledWith('t1'));
     await waitFor(() => expect(screen.queryByText('Laptop')).not.toBeInTheDocument());
     expect(notify).toHaveBeenCalledWith('Token revoked');
+  });
+
+  it('shows one-click (OAuth) setup first: URL and Claude Code command, no token', async () => {
+    listAccessTokens.mockResolvedValue([{ ...saved, viaOAuth: true, name: 'Claude' }]);
+    renderWithProviders(<ConnectClaudeDrawer open onClose={() => {}} />);
+    expect(screen.getByText('https://api.example.com/mcp')).toBeInTheDocument();
+    expect(screen.getByText('claude mcp add --transport http todo https://api.example.com/mcp')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create' })).not.toBeInTheDocument();
+    expect(await screen.findByText(/Connected app · Last used/)).toBeInTheDocument();
   });
 
   it('builds setup snippets for each client', () => {

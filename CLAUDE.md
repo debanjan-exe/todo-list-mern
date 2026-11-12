@@ -57,6 +57,14 @@ route → (requireAuth) → controller → service → data → model
    - Token management (`/api/tokens`) needs a `session`, so an AI client cannot make more tokens.
 6. **No secrets in code.** `.env` files are git-ignored. Do not commit tokens, passwords or connection strings.
 
+## OAuth (one-click Connect)
+
+- Files: `services/oauthService.js`, `controllers/oauthController.js`, `routes/oauthRoutes.js`; app page `client/src/pages/OAuthConsent.jsx`.
+- Stateless: `client_id` and the auth code are JWTs signed with `JWT_SECRET + ':oauth'` (never accepted as a session). PKCE S256 is required.
+- The access token is a normal personal access token with `oauthClient` set (one per app; reconnect revokes the old one).
+- Public OAuth routes are mounted BEFORE the global CORS rule (any origin). `/api/oauth/*` needs a session JWT.
+- Env: `APP_URL` (consent page base URL, falls back to `CLIENT_URL`), optional `OAUTH_REDIRECT_HOSTS`.
+
 ## MCP server
 
 - `POST /mcp`, Streamable HTTP, **stateless** (`sessionIdGenerator: undefined`, `enableJsonResponse: true`): a new `McpServer` for each request, made for `req.userId`. `GET` and `DELETE /mcp` return 405.

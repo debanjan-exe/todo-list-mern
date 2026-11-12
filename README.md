@@ -15,7 +15,7 @@
 ![Node.js](https://img.shields.io/badge/Node.js_22-5FA04E?logo=nodedotjs&logoColor=white)
 ![MUI](https://img.shields.io/badge/MUI-007FFF?logo=mui&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
-![Vitest](https://img.shields.io/badge/tests-94-6E9F18?logo=vitest&logoColor=white)
+![Vitest](https://img.shields.io/badge/tests-106-6E9F18?logo=vitest&logoColor=white)
 ![JWT](https://img.shields.io/badge/auth-JWT_+_bcrypt-000000?logo=jsonwebtokens&logoColor=white)
 ![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)
 
@@ -83,7 +83,7 @@ Extra features:
 - **Auth:** JWT login, bcrypt password hashes, session kept after reload, automatic sign out when the token expires.
 - **Bottom navigation** (Home · Weeks · Search · Profile) for signed-in users. The `+` button floats above it.
 - **Profile page:** name, email, task numbers, Sign out (with confirm), **Edit Profile** drawer (name editable, email disabled), and **Delete this account** (confirm → soft delete).
-- **Connect to Claude (MCP):** an MCP server at `POST /mcp` lets Claude (Claude Code, Claude Desktop or any MCP client) list, search, create, update, complete and delete your tasks, and give a weekly summary. Make a **personal access token** on the Profile page (shown one time), copy the setup snippet, and revoke the token at any time. See [AI access (MCP)](#ai-access-mcp).
+- **Connect to Claude (MCP):** an MCP server at `POST /mcp` lets Claude (Claude Code, Claude Desktop or any MCP client) list, search, create, update, complete and delete your tasks, and give a weekly summary. **One-click OAuth:** add the URL as a custom connector, click Connect, sign in and tap **Allow**. Clients without OAuth can use a **personal access token** (shown one time). Revoke access at any time on the Profile page. See [AI access (MCP)](#ai-access-mcp).
 - **Week strip** with arrows to move to the previous or next week.
 - **Task Complete / Task Pending** cards and a **Weekly Progress** bar for the selected week.
 - **Priority dot:** green = Low, orange = Medium, red = High.
@@ -186,16 +186,16 @@ todo-app/
 │   │   ├── index.js                     # Loads .env, starts the server, connects to MongoDB (with retry), makes the test user
 │   │   ├── config/db.js                 # MongoDB connect + retry every 5 s, state, ping
 │   │   ├── app.js                       # Express app: middlewares, routes, error handler
-│   │   ├── routes/                      # ROUTES: auth, task, health, token, mcp
-│   │   ├── controllers/                 # CONTROLLER: auth, task, health, token, mcp (HTTP only)
-│   │   ├── services/                    # SERVICE: authService.js (hash, JWT, test user), taskService.js, healthService.js, tokenService.js
+│   │   ├── routes/                      # ROUTES: auth, task, health, token, mcp, oauth
+│   │   ├── controllers/                 # CONTROLLER: auth, task, health, token, mcp, oauth (HTTP only)
+│   │   ├── services/                    # SERVICE: authService.js (hash, JWT, test user), taskService.js, healthService.js, tokenService.js, oauthService.js (one-click Connect)
 │   │   ├── data/                        # DATA: userData.js, taskData.js, tokenData.js (the only MongoDB queries)
 │   │   ├── models/                      # MODEL: User.js, Task.js, AccessToken.js
 │   │   ├── mcp/                         # MCP server: createMcpServer.js (instructions), tools.js (8 task tools)
 │   │   ├── middleware/                  # auth.js (requireAuth), errorHandler.js
 │   │   └── utils/                       # asyncHandler.js, errors.js (400/401/403/404/409 errors)
 │   ├── tests/unit/                      # Vitest unit tests (services, middleware)
-│   ├── tests/integration/mcp.test.js    # Real app + MCP SDK client (data layer in memory)
+│   ├── tests/integration/               # mcp.test.js, oauth.test.js: real app over HTTP (data layer in memory)
 │   ├── vitest.config.js
 │   ├── .env.example
 │   ├── package.json
@@ -214,7 +214,7 @@ todo-app/
 │   │   ├── context/AuthContext.jsx      # user, signIn, signUp, signOut, session check on start
 │   │   ├── context/TaskContext.jsx      # Shared state: tasks, actions, sheet, details, confirm, toast
 │   │   ├── utils/dateUtils.js           # Week logic (Monday start, grouping, formatting)
-│   │   ├── pages/                       # Onboarding, SignIn, SignUp, Home, Weeks, Search, Profile, SomethingWentWrong
+│   │   ├── pages/                       # Onboarding, SignIn, SignUp, Home, Weeks, Search, Profile, OAuthConsent, SomethingWentWrong
 │   │   └── components/
 │   │       ├── ScreenLayout.jsx         # Fixed header + scrolling list
 │   │       ├── BottomNav.jsx, AddFab.jsx # Bottom navigation + floating "+" button
@@ -318,6 +318,8 @@ Quick check: [`/api/health`](https://todo-list-api-1n6q.onrender.com/api/health)
 | GET | `/tokens` | – | `[{ id, name, prefix, lastUsedAt, createdAt }]` (never the full token) |
 | POST | `/tokens` | `{ name }` (1–40 characters) | `201 { id, name, prefix, ..., token }` · the **only** time the full token is returned · 400 after 10 tokens |
 | DELETE | `/tokens/:id` | – | `{ message }` · **soft delete**: the token stops working at once |
+
+**OAuth (for Claude "Connect")**, not under `/api`: `GET /.well-known/oauth-protected-resource`, `GET /.well-known/oauth-authorization-server`, `POST /oauth/register`, `GET /oauth/authorize` (→ consent page), `POST /oauth/token`. The consent page uses `GET /api/oauth/authorize/info` and `POST /api/oauth/authorize` (session JWT only).
 
 **MCP**: `POST /mcp` (not under `/api`), see [AI access (MCP)](#ai-access-mcp).
 
@@ -435,16 +437,19 @@ flowchart LR
   S --> D[data layer] --> DB[(MongoDB)]
 ```
 
-**How to connect**
+**How to connect (one click, OAuth)**
 
-1. In the app, open **Profile → Connect to Claude**, type a name and tap **Create**. Copy the token: it is shown **one time**.
-2. Add the server to your client (the drawer gives the snippet with your token in it):
+1. In Claude, open **Settings → Connectors → Add custom connector**.
+2. Name: `To-Do List`. MCP server URL: `https://todo-list-api-1n6q.onrender.com/mcp`. Click **Add**, then **Connect**.
+3. The To-Do app opens. Sign in if asked, then tap **Allow**. Claude is connected. You copy no token.
 
-```bash
-# Claude Code
-claude mcp add --transport http todo https://todo-list-api-1n6q.onrender.com/mcp \
-  --header "Authorization: Bearer <your-token>"
-```
+Claude Code: `claude mcp add --transport http todo https://todo-list-api-1n6q.onrender.com/mcp`, then type `/mcp` and sign in.
+
+To stop access: **Profile → Connect to Claude → Revoke**.
+
+**With a token (clients without OAuth)**
+
+In **Profile → Connect to Claude → With a token**, type a name and tap **Create**. Copy the token: it is shown **one time**. Then use the snippet from the drawer, for example:
 
 ```json
 // Claude Desktop: claude_desktop_config.json
@@ -459,7 +464,34 @@ claude mcp add --transport http todo https://todo-list-api-1n6q.onrender.com/mcp
 }
 ```
 
-3. To stop access, tap **Revoke** next to the token.
+**OAuth flow (simple version of Retainia's MCP OAuth)**
+
+```mermaid
+sequenceDiagram
+  participant C as Claude
+  participant A as API (Render)
+  participant W as To-Do app (Netlify)
+  C->>A: POST /mcp (no token)
+  A-->>C: 401 + WWW-Authenticate: resource_metadata
+  C->>A: GET /.well-known/oauth-protected-resource, oauth-authorization-server
+  C->>A: POST /oauth/register
+  A-->>C: client_id (signed, nothing saved)
+  C->>A: GET /oauth/authorize (PKCE challenge, state)
+  A-->>W: 302 to /oauth/authorize (consent page)
+  W->>W: sign in if needed, user taps Allow
+  W->>A: POST /api/oauth/authorize (session JWT)
+  A-->>W: redirect URL with a one-time code (5 min)
+  W-->>C: back to Claude with code + state
+  C->>A: POST /oauth/token (code + PKCE verifier)
+  A-->>C: access_token (todo_pat_...)
+  C->>A: POST /mcp (Bearer token)
+```
+
+- **No Redis and no new collections.** The client id and the code are JWTs signed with a separate key (`JWT_SECRET + ":oauth"`), so an OAuth JWT can never be used as a sign-in session.
+- **Safe redirect URIs only:** `claude.ai`, `claude.com` and `localhost` (add more with `OAUTH_REDIRECT_HOSTS`).
+- **PKCE (S256) is required.** A stolen code is useless without the verifier.
+- **The access token is a personal access token,** marked "Connected app" in the Profile list. One token per app: connecting again revokes the old one.
+- **Only the signed-in app can tap Allow** (session JWT). An access token gets `403`.
 
 **Tools**
 
@@ -569,11 +601,11 @@ Notes:
 
 ## 10. Tests
 
-### Automated tests (Vitest) – 94 tests
+### Automated tests (Vitest) – 106 tests
 
 ```bash
-cd server && pnpm test     # 49 tests (40 unit + 9 MCP integration)
-cd client && pnpm test     # 45 tests
+cd server && pnpm test     # 55 tests (40 unit + 15 integration)
+cd client && pnpm test     # 51 tests
 pnpm test:watch            # re-run on every save (either folder)
 ```
 
@@ -586,6 +618,7 @@ A **unit test** checks one piece alone. Its dependencies are replaced with **moc
 | server | `healthService.test.js` (6) | `ok` / `error` for database up, down, ping failure, missing `JWT_SECRET`; test user `warn` / `off` |
 | server | `middleware.test.js` (7) | `requireAuth` (no token, valid token, deleted account); `errorHandler` maps errors to 400 / 404 / 409 / 500 and hides 500 details |
 | server | `integration/mcp.test.js` (9) | the **real Express app** with the official **MCP SDK client** over HTTP (only the data layer is in memory): token shown once and stored as a hash; a token cannot manage tokens (403); revoke stops it at once; `/mcp` needs a token; 8 tools listed; create → list by week → complete → search → weekly summary → soft delete; tool errors; user A's tasks are never seen or changed by user B |
+| server | `integration/oauth.test.js` (6) | full one-click Connect like Claude: 401 + `WWW-Authenticate`, metadata, register → authorize (302 to the consent page) → Allow → token (form post) → MCP works; reconnect replaces the old token; wrong PKCE verifier, another client, untrusted redirect URI refused; only the signed-in app can approve |
 | client | `dateUtils.test.js` (12) | Monday-start weeks (Sunday is the END), 7 days, grouping and open / completed counts, formatting |
 | client | `api.test.js` (8) | `Authorization` header, JSON body, URL encoding, error status, 401 → sign out only when a token was sent, health on 503 |
 | client | `SignIn.test.jsx` (5) | test account filled in, field errors, error clears on typing, trimmed email, server error shown |
@@ -593,7 +626,8 @@ A **unit test** checks one piece alone. Its dependencies are replaced with **moc
 | client | `ServerGate.test.jsx` (4) | all ready → app + session flag; skipped when already checked; server unreachable → countdown; database down → retries by itself (fake timers) |
 | client | `ErrorBoundary.test.jsx` (3) | crash → "Something went wrong", details, **Try again** recovers |
 | client | `WeekStrip.test.jsx` (3) | Mon–Sun days, tap selects a day, arrows move one week |
-| client | `ConnectClaudeDrawer.test.jsx` (5) | token list shows only the prefix; new token shown once and put in the setup snippet; empty name blocked; revoke only after confirm; snippets for each client |
+| client | `ConnectClaudeDrawer.test.jsx` (6) | one-click setup first (URL, Claude Code command, no token); token list shows only the prefix or "Connected app"; new token shown once and put in the snippet; empty name blocked; revoke only after confirm |
+| client | `OAuthConsent.test.jsx` (5) | shows who asks and the account; **Allow** sends the same request and goes back to Claude; **Cancel** sends `access_denied`; bad link shows an error; signed out → request kept → Sign In |
 
 **Do the tests catch bugs?** Yes. Two bugs were added on purpose to check this. When the server stopped removing the `user` field, 2 tests failed. When weeks started on Sunday, 9 client tests failed. With the correct code, all tests pass.
 
@@ -658,4 +692,4 @@ A **unit test** checks one piece alone. Its dependencies are replaced with **moc
 - A "Recently deleted" page that uses the soft-delete data to restore tasks.
 - Pagination or server-side week grouping for very large task lists.
 - Integration tests with a real MongoDB (Supertest + mongodb-memory-server) and end-to-end tests (Playwright), run in CI (GitHub Actions).
-- MCP: OAuth 2.1 sign-in (so users can add the server in Claude without copying a token), token expiry dates, and read-only tokens.
+- MCP OAuth: short-lived access tokens with refresh tokens, single-use codes (store used code ids), and read-only access.

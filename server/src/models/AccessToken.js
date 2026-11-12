@@ -10,6 +10,8 @@ const accessTokenSchema = new mongoose.Schema(
     tokenHash: { type: String, required: true, unique: true }, // sha256 of the token
     prefix: { type: String, required: true }, // first characters, to recognise the token in the list
     lastUsedAt: { type: Date, default: null },
+    // Set when the token was made by "Connect" (OAuth). Hash of the client id: one token per app.
+    oauthClient: { type: String, default: null },
 
     // Soft delete: a revoked token is only marked, never removed
     isDeleted: { type: Boolean, default: false },

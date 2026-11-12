@@ -70,7 +70,7 @@ export const taskData = {
 
 export const tokenData = {
   insertToken: async (data) => {
-    const token = { _id: newId(), lastUsedAt: null, isDeleted: false, createdAt: now(), ...data };
+    const token = { _id: newId(), lastUsedAt: null, oauthClient: null, isDeleted: false, createdAt: now(), ...data };
     db.tokens.push(token);
     return token;
   },
@@ -80,6 +80,11 @@ export const tokenData = {
   markTokenRevoked: async (userId, id) => {
     const token = db.tokens.find((t) => same(t._id, id) && same(t.user, userId) && !t.isDeleted);
     return token ? Object.assign(token, { isDeleted: true, deletedAt: now() }) : null;
+  },
+  markClientTokensRevoked: async (userId, oauthClient) => {
+    db.tokens
+      .filter((t) => same(t.user, userId) && t.oauthClient === oauthClient && !t.isDeleted)
+      .forEach((t) => Object.assign(t, { isDeleted: true, deletedAt: now() }));
   },
   touchToken: async (id) => {
     const token = db.tokens.find((t) => same(t._id, id));

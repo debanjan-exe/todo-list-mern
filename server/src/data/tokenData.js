@@ -29,6 +29,14 @@ export function markTokenRevoked(userId, id) {
   );
 }
 
+// OAuth: revoke the old token of the same app (client) when the user connects it again
+export function markClientTokensRevoked(userId, oauthClient) {
+  return AccessToken.updateMany(
+    { user: userId, oauthClient, ...ACTIVE },
+    { isDeleted: true, deletedAt: new Date() }
+  );
+}
+
 export function touchToken(id) {
   return AccessToken.updateOne({ _id: id }, { lastUsedAt: new Date() });
 }
