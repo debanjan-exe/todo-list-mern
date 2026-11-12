@@ -70,3 +70,12 @@ export const updateTask = (id, changes) =>
   request(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify(changes) });
 
 export const deleteTask = (id) => request(`/tasks/${id}`, { method: 'DELETE' });
+
+// ---- Personal access tokens (for AI clients such as Claude, over MCP) ----
+// The full token is in the createToken reply ONLY. The server keeps only a hash.
+export const listAccessTokens = () => request('/tokens');
+export const createAccessToken = (name) => request('/tokens', { method: 'POST', body: JSON.stringify({ name }) });
+export const revokeAccessToken = (id) => request(`/tokens/${id}`, { method: 'DELETE' });
+
+// MCP address = API address without "/api" + "/mcp"
+export const MCP_URL = BASE_URL.replace(/\/api\/?$/, '') + '/mcp';

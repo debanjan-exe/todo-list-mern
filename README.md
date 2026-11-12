@@ -15,7 +15,7 @@
 ![Node.js](https://img.shields.io/badge/Node.js_22-5FA04E?logo=nodedotjs&logoColor=white)
 ![MUI](https://img.shields.io/badge/MUI-007FFF?logo=mui&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
-![Vitest](https://img.shields.io/badge/unit_tests-80-6E9F18?logo=vitest&logoColor=white)
+![Vitest](https://img.shields.io/badge/tests-94-6E9F18?logo=vitest&logoColor=white)
 ![JWT](https://img.shields.io/badge/auth-JWT_+_bcrypt-000000?logo=jsonwebtokens&logoColor=white)
 ![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)
 
@@ -83,6 +83,7 @@ Extra features:
 - **Auth:** JWT login, bcrypt password hashes, session kept after reload, automatic sign out when the token expires.
 - **Bottom navigation** (Home · Weeks · Search · Profile) for signed-in users. The `+` button floats above it.
 - **Profile page:** name, email, task numbers, Sign out (with confirm), **Edit Profile** drawer (name editable, email disabled), and **Delete this account** (confirm → soft delete).
+- **Connect to Claude (MCP):** an MCP server at `POST /mcp` lets Claude (Claude Code, Claude Desktop or any MCP client) list, search, create, update, complete and delete your tasks, and give a weekly summary. Make a **personal access token** on the Profile page (shown one time), copy the setup snippet, and revoke the token at any time. See [AI access (MCP)](#ai-access-mcp).
 - **Week strip** with arrows to move to the previous or next week.
 - **Task Complete / Task Pending** cards and a **Weekly Progress** bar for the selected week.
 - **Priority dot:** green = Low, orange = Medium, red = High.
@@ -185,14 +186,16 @@ todo-app/
 │   │   ├── index.js                     # Loads .env, starts the server, connects to MongoDB (with retry), makes the test user
 │   │   ├── config/db.js                 # MongoDB connect + retry every 5 s, state, ping
 │   │   ├── app.js                       # Express app: middlewares, routes, error handler
-│   │   ├── routes/                      # ROUTES: authRoutes.js, taskRoutes.js, healthRoutes.js
-│   │   ├── controllers/                 # CONTROLLER: auth, task, health (HTTP only)
-│   │   ├── services/                    # SERVICE: authService.js (hash, JWT, test user), taskService.js, healthService.js
-│   │   ├── data/                        # DATA: userData.js, taskData.js (the only MongoDB queries)
-│   │   ├── models/                      # MODEL: User.js, Task.js
+│   │   ├── routes/                      # ROUTES: auth, task, health, token, mcp
+│   │   ├── controllers/                 # CONTROLLER: auth, task, health, token, mcp (HTTP only)
+│   │   ├── services/                    # SERVICE: authService.js (hash, JWT, test user), taskService.js, healthService.js, tokenService.js
+│   │   ├── data/                        # DATA: userData.js, taskData.js, tokenData.js (the only MongoDB queries)
+│   │   ├── models/                      # MODEL: User.js, Task.js, AccessToken.js
+│   │   ├── mcp/                         # MCP server: createMcpServer.js (instructions), tools.js (8 task tools)
 │   │   ├── middleware/                  # auth.js (requireAuth), errorHandler.js
-│   │   └── utils/                       # asyncHandler.js, errors.js (400/401/404/409 errors)
+│   │   └── utils/                       # asyncHandler.js, errors.js (400/401/403/404/409 errors)
 │   ├── tests/unit/                      # Vitest unit tests (services, middleware)
+│   ├── tests/integration/mcp.test.js    # Real app + MCP SDK client (data layer in memory)
 │   ├── vitest.config.js
 │   ├── .env.example
 │   ├── package.json
@@ -217,6 +220,7 @@ todo-app/
 │   │       ├── BottomNav.jsx, AddFab.jsx # Bottom navigation + floating "+" button
 │   │       ├── AuthLayout.jsx           # Shared Sign In / Sign Up layout and fields
 │   │       ├── EditProfileDrawer.jsx    # Edit name (email disabled)
+│   │       ├── ConnectClaudeDrawer.jsx  # Access tokens + MCP setup snippets
 │   │       ├── ErrorBoundary.jsx        # Catches crashes → SomethingWentWrong page
 │   │       ├── startup/                 # ServerGate (health check logic), StartupScreen (UI), SplashLogo
 │   │       ├── TaskItem.jsx             # One task row (checkbox, swipe, icons)
@@ -239,6 +243,8 @@ todo-app/
 │   └── pnpm-lock.yaml
 │
 ├── docs/screenshots/                    # Screenshots used in this README
+├── CLAUDE.md                            # Guide for AI coding agents (layers, rules, commands)
+├── AGENTS.md                            # Points to CLAUDE.md
 └── README.md
 ```
 
@@ -304,6 +310,16 @@ Quick check: [`/api/health`](https://todo-list-api-1n6q.onrender.com/api/health)
 | POST | `/tasks` | `{ title, dateTime, description?, endTime?, priority? }` | `201` + new task |
 | PUT | `/tasks/:id` | Any fields, e.g. `{ status: "Completed" }` | Updated task |
 | DELETE | `/tasks/:id` | – | `{ message, id }` (**soft delete**) |
+
+**Access tokens (private, app session only)**: personal access tokens for AI clients. These endpoints need the **sign-in JWT**; a personal access token gets `403`, so an AI client cannot make more tokens.
+
+| Method | Endpoint | Body | Response |
+|---|---|---|---|
+| GET | `/tokens` | – | `[{ id, name, prefix, lastUsedAt, createdAt }]` (never the full token) |
+| POST | `/tokens` | `{ name }` (1–40 characters) | `201 { id, name, prefix, ..., token }` · the **only** time the full token is returned · 400 after 10 tokens |
+| DELETE | `/tokens/:id` | – | `{ message }` · **soft delete**: the token stops working at once |
+
+**MCP**: `POST /mcp` (not under `/api`), see [AI access (MCP)](#ai-access-mcp).
 
 Errors: `400` invalid data · `401` not signed in (or account deleted) · `403` not allowed · `404` unknown, deleted or another user's task · `409` email already used · `500` server error. All errors are `{ "message": "..." }`.
 
@@ -406,6 +422,66 @@ User taps the checkbox
    → Home, All Weeks and Task Details re-render  [counts + progress bar change]
 ```
 
+### AI access (MCP)
+
+The API also has an **MCP server** (Model Context Protocol). With it, Claude can work with your tasks in chat: *"What is open this week?"*, *"Add a call with Sam tomorrow at 3 pm, high priority"*, *"Mark the gym task done"*.
+
+```mermaid
+flowchart LR
+  C[Claude / MCP client] -- "POST /mcp<br/>Bearer todo_pat_…" --> A[requireAuth<br/>hash → user]
+  A --> M[mcpController<br/>new McpServer per request]
+  M --> T[mcp/tools.js]
+  T --> S[taskService / authService]
+  S --> D[data layer] --> DB[(MongoDB)]
+```
+
+**How to connect**
+
+1. In the app, open **Profile → Connect to Claude**, type a name and tap **Create**. Copy the token: it is shown **one time**.
+2. Add the server to your client (the drawer gives the snippet with your token in it):
+
+```bash
+# Claude Code
+claude mcp add --transport http todo https://todo-list-api-1n6q.onrender.com/mcp \
+  --header "Authorization: Bearer <your-token>"
+```
+
+```json
+// Claude Desktop: claude_desktop_config.json
+{
+  "mcpServers": {
+    "todo": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://todo-list-api-1n6q.onrender.com/mcp",
+               "--header", "Authorization: Bearer <your-token>"]
+    }
+  }
+}
+```
+
+3. To stop access, tap **Revoke** next to the token.
+
+**Tools**
+
+| Tool | Does | Type |
+|---|---|---|
+| `get_profile` | Name and email of the token owner | read |
+| `list_tasks` | Tasks in a date range (`from`, `to`) and/or by `status` | read |
+| `search_tasks` | Text search in title and description | read |
+| `create_task` | New task (`title`, `dateTime`, `endTime?`, `priority?`, `description?`) | write |
+| `update_task` | Change any fields of a task | write |
+| `complete_task` | Mark Completed (or back to In Progress) | write |
+| `delete_task` | Soft delete. Marked **destructive**, so the client asks the user first | write |
+| `weekly_summary` | Total, completed, open, completion %, open high-priority and overdue tasks | read |
+
+**Design choices**
+
+- **Same rules as the app.** Each tool calls the same service functions as the REST API, so user scope, validation and soft delete are in one place.
+- **Personal access tokens.** Random 32-byte tokens with the prefix `todo_pat_`. The server stores only the **sha256 hash**, plus a short prefix to show in the list. Max 10 tokens per user. `lastUsedAt` is updated on each use. Revoke = soft delete.
+- **Least power.** A token can use the task API and `/mcp`, but it **cannot** manage tokens (`403`). Only the signed-in app can.
+- **Stateless transport.** Streamable HTTP with JSON answers. A new MCP server is made for each request, so nothing is kept in memory and it works on Render's free plan. `GET /mcp` → `405`.
+- **Errors the model can fix.** A `400` / `404` from a service comes back as a tool error (`isError: true`, `"Error: Task not found"`), not a crash.
+
 ### Key ideas to explain
 0. **Auth state (`AuthContext`) and route groups (`routes/`):** see "Authentication" above. `TaskProvider` lives inside `PrivateRoutes`, so tasks load only after sign in and are cleared on sign out.
 1. **One shared state (`TaskContext`):** tasks load once. All pages read the same list. The context also controls the add/edit sheet, the details drawer, the confirm dialog and error messages.
@@ -493,11 +569,11 @@ Notes:
 
 ## 10. Tests
 
-### Automated unit tests (Vitest) – 80 tests
+### Automated tests (Vitest) – 94 tests
 
 ```bash
-cd server && pnpm test     # 40 tests
-cd client && pnpm test     # 40 tests
+cd server && pnpm test     # 49 tests (40 unit + 9 MCP integration)
+cd client && pnpm test     # 45 tests
 pnpm test:watch            # re-run on every save (either folder)
 ```
 
@@ -509,6 +585,7 @@ A **unit test** checks one piece alone. Its dependencies are replaced with **moc
 | server | `authService.test.js` (16) | sign-up rules, 409 for a used email, bcrypt hash stored (never the password); same 401 message for a wrong password and an unknown email; tokens; edit name (email ignored); delete account (403 for the test account); one test user, env settings |
 | server | `healthService.test.js` (6) | `ok` / `error` for database up, down, ping failure, missing `JWT_SECRET`; test user `warn` / `off` |
 | server | `middleware.test.js` (7) | `requireAuth` (no token, valid token, deleted account); `errorHandler` maps errors to 400 / 404 / 409 / 500 and hides 500 details |
+| server | `integration/mcp.test.js` (9) | the **real Express app** with the official **MCP SDK client** over HTTP (only the data layer is in memory): token shown once and stored as a hash; a token cannot manage tokens (403); revoke stops it at once; `/mcp` needs a token; 8 tools listed; create → list by week → complete → search → weekly summary → soft delete; tool errors; user A's tasks are never seen or changed by user B |
 | client | `dateUtils.test.js` (12) | Monday-start weeks (Sunday is the END), 7 days, grouping and open / completed counts, formatting |
 | client | `api.test.js` (8) | `Authorization` header, JSON body, URL encoding, error status, 401 → sign out only when a token was sent, health on 503 |
 | client | `SignIn.test.jsx` (5) | test account filled in, field errors, error clears on typing, trimmed email, server error shown |
@@ -516,8 +593,9 @@ A **unit test** checks one piece alone. Its dependencies are replaced with **moc
 | client | `ServerGate.test.jsx` (4) | all ready → app + session flag; skipped when already checked; server unreachable → countdown; database down → retries by itself (fake timers) |
 | client | `ErrorBoundary.test.jsx` (3) | crash → "Something went wrong", details, **Try again** recovers |
 | client | `WeekStrip.test.jsx` (3) | Mon–Sun days, tap selects a day, arrows move one week |
+| client | `ConnectClaudeDrawer.test.jsx` (5) | token list shows only the prefix; new token shown once and put in the setup snippet; empty name blocked; revoke only after confirm; snippets for each client |
 
-**Do the tests catch bugs?** Yes. Two bugs were added on purpose to check this. When the server stopped removing the `user` field, 2 tests failed. When weeks started on Sunday, 9 client tests failed. With the correct code, all 80 pass.
+**Do the tests catch bugs?** Yes. Two bugs were added on purpose to check this. When the server stopped removing the `user` field, 2 tests failed. When weeks started on Sunday, 9 client tests failed. With the correct code, all tests pass.
 
 ### Manual and end-to-end checks done during development
 
@@ -580,3 +658,4 @@ A **unit test** checks one piece alone. Its dependencies are replaced with **moc
 - A "Recently deleted" page that uses the soft-delete data to restore tasks.
 - Pagination or server-side week grouping for very large task lists.
 - Integration tests with a real MongoDB (Supertest + mongodb-memory-server) and end-to-end tests (Playwright), run in CI (GitHub Actions).
+- MCP: OAuth 2.1 sign-in (so users can add the server in Claude without copying a token), token expiry dates, and read-only tokens.

@@ -25,7 +25,7 @@ src/
 │   └── PrivateRoutes.jsx    # TaskProvider + "/home", "/weeks", "/search", "/profile" + BottomNav
 │                            #   + shared TaskSheet, TaskDetails, ConfirmDialog, Snackbar; anything else → /home
 ├── theme.js                 # Figma colors + Poppins font
-├── api.js                   # fetch helper with "Authorization: Bearer <token>", auth + task calls, 401 → sign out
+├── api.js                   # fetch helper with "Authorization: Bearer <token>", auth, task and access-token calls, MCP_URL, 401 → sign out
 ├── context/
 │   ├── AuthContext.jsx      # user, checking, signIn, signUp, signOut (token in localStorage)
 │   └── TaskContext.jsx      # tasks, add/edit/remove/toggle, sheet, details, confirm(), notify()
@@ -46,6 +46,7 @@ src/
     │   └── SplashLogo.jsx   # animated logo (tick draws itself, pulse ring)
     ├── ErrorBoundary.jsx    # class component: catches crashes → SomethingWentWrong
     ├── EditProfileDrawer.jsx# edit name; email disabled
+    ├── ConnectClaudeDrawer.jsx # Profile → Connect to Claude: make / list / revoke access tokens, MCP setup snippets
     ├── AuthLayout.jsx       # Sign In / Sign Up layout + AuthField (show/hide password)
     ├── BottomNav.jsx        # Home · Weeks · Search · Profile (tab follows the URL)
     ├── AddFab.jsx           # "+" button above the bottom nav
@@ -91,7 +92,7 @@ src/
 tests/
 ├── setup.js                 # jest-dom matchers + cleanup (page, localStorage, sessionStorage) after each test
 ├── renderWithProviders.jsx  # render with the MUI theme + MemoryRouter, like the real app
-└── unit/                    # dateUtils, api, SignIn, SignUp, ServerGate, ErrorBoundary, WeekStrip (40 tests)
+└── unit/                    # dateUtils, api, SignIn, SignUp, ServerGate, ErrorBoundary, WeekStrip, ConnectClaudeDrawer (45 tests)
 ```
 
 - Tests run in **jsdom** (a fake browser), set in `vite.config.js` → `test`.

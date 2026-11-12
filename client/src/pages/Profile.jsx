@@ -1,9 +1,11 @@
-// Profile screen: who is signed in, edit profile, task numbers, Sign out, Delete account.
+// Profile screen: who is signed in, edit profile, task numbers, Connect to Claude (MCP), Sign out, Delete account.
 import { useState } from 'react';
 import { Box, Typography, Button, Avatar, IconButton, CircularProgress } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
+import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import ScreenLayout from '../components/ScreenLayout';
 import EditProfileDrawer from '../components/EditProfileDrawer';
+import ConnectClaudeDrawer from '../components/ConnectClaudeDrawer';
 import { EditIcon } from '../components/icons';
 import { useAuth } from '../context/AuthContext';
 import { useTasks } from '../context/TaskContext';
@@ -22,6 +24,7 @@ export default function Profile() {
   const { user, signOut, deleteAccount } = useAuth();
   const { tasks, confirm, notify } = useTasks();
   const [editOpen, setEditOpen] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const completed = tasks.filter((t) => t.status === 'Completed').length;
 
@@ -77,6 +80,16 @@ export default function Profile() {
         <Stat label="Open" value={tasks.length - completed} bg={colors.pendingBg} color={colors.pendingIcon} />
       </Box>
 
+      {/* AI access: personal access tokens for the MCP server (/mcp) */}
+      <Typography sx={{ fontSize: 14, fontWeight: 600, mt: 3, mb: 0.5 }}>AI assistant</Typography>
+      <Typography sx={{ fontSize: 11, color: colors.muted, mb: 1.5 }}>
+        Manage your tasks from Claude with MCP.
+      </Typography>
+      <Button fullWidth variant="outlined" startIcon={<HubOutlinedIcon />} onClick={() => setConnectOpen(true)} disabled={deleting}
+        sx={{ py: 1.25, borderRadius: '2px', fontSize: 14 }}>
+        Connect to Claude
+      </Button>
+
       <Button fullWidth variant="outlined" startIcon={<LogoutIcon />} onClick={handleSignOut} disabled={deleting}
         sx={{ mt: 4, py: 1.25, borderRadius: '2px', fontSize: 14 }}>
         Sign out
@@ -99,6 +112,7 @@ export default function Profile() {
       </Box>
 
       <EditProfileDrawer open={editOpen} onClose={() => setEditOpen(false)} />
+      <ConnectClaudeDrawer open={connectOpen} onClose={() => setConnectOpen(false)} />
     </ScreenLayout>
   );
 }

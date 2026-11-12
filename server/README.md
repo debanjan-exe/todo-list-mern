@@ -73,6 +73,7 @@ Error in any layer → errorHandler → 400 / 401 / 404 / 409 / 500
 - **Sign up:** checks the fields (password ≥ 6 characters), refuses a used email (409), stores a **bcrypt hash**, returns `{ token, user }`.
 - **Sign in:** compares the hash. An unknown email and a wrong password give the same 401 message.
 - **Token:** JWT `{ id }` signed with `JWT_SECRET`. The client sends `Authorization: Bearer <token>`.
+- **Personal access tokens** (`todo_pat_…`, for AI clients): `requireAuth` sees the prefix, hashes the token (sha256) and finds it in `AccessToken`. It sets `req.authType = 'access-token'` (a JWT gives `'session'`). `/api/tokens` refuses access tokens (403).
 - **Ownership:** tasks get `user = req.userId` on create. The service ignores any `user` field in the body. Another user's task gives 404.
 
 ## Server status and the test user
@@ -96,15 +97,31 @@ Error in any layer → errorHandler → 400 / 401 / 404 / 409 / 500
 - `data/taskData.js` adds `isDeleted: false` to every query.
 - To see deleted tasks: `mongosh todo-app --eval 'db.tasks.find({ isDeleted: true })'`
 
-## Unit tests
+## MCP server (`POST /mcp`)
 
-`tests/unit/*.test.js` (Vitest, 40 tests). Each test file mocks the layer below with `vi.mock(...)`:
+- `routes/mcpRoutes.js` → `controllers/mcpController.js` → `mcp/createMcpServer.js` → `mcp/tools.js`.
+- Streamable HTTP, **stateless**: a new `McpServer` + transport for each request, for `req.userId`. JSON answers (`enableJsonResponse`). `GET` / `DELETE` → 405.
+- 8 tools: `get_profile`, `list_tasks`, `search_tasks`, `create_task`, `update_task`, `complete_task`, `delete_task`, `weekly_summary`. They call `taskService` / `authService`, so the rules are the same as the REST API.
+- `run()` in `tools.js` turns a 4xx service error into an MCP tool error (`isError: true`). Other errors go to `errorHandler`.
+- Packages: `@modelcontextprotocol/sdk`, `zod` (tool input schemas).
+
+## Tests
+
+`pnpm test` → 49 tests (Vitest). No database is needed.
+
+### Unit (`tests/unit/`, 40 tests)
+
+Each file mocks the layer below with `vi.mock(...)`. Each test file mocks the layer below with `vi.mock(...)`:
 
 - `taskService.test.js`, `authService.test.js`: the **data layer** is mocked → only the business rules are tested.
 - `healthService.test.js`: `config/db.js` and the data layer are mocked → up / down / warn cases.
 - `middleware.test.js`: `requireAuth` and `errorHandler` are called with fake `req` / `res` / `next`.
 
-`vitest.config.js` sets `JWT_SECRET=test-secret` for the tests. No database is needed.
+### Integration (`tests/integration/mcp.test.js`, 9 tests)
+
+Starts the **real Express app** on a free port and talks to it with `fetch` and the official **MCP SDK client** (`StreamableHTTPClientTransport`). Only the data layer is replaced by `tests/helpers/memoryData.js` (in-memory users, tasks, tokens with the same rules). Checks access tokens (hash only, 403 for token management, revoke), `/mcp` 401 without a token, the tool list, a full create → list → complete → search → summary → delete flow, tool errors and user isolation.
+
+`vitest.config.js` sets `JWT_SECRET=test-secret` for the tests.
 
 ## Endpoints
 
@@ -120,6 +137,11 @@ Error in any layer → errorHandler → 400 / 401 / 404 / 409 / 500
 | POST | `/api/tasks` | token | 201 task | 400, 401 |
 | PUT | `/api/tasks/:id` | token | 200 task | 400, 401, 404 |
 | DELETE | `/api/tasks/:id` | token | 200 `{ message, id }` | 401, 404 |
+| GET | `/api/tokens` | session JWT | 200 list (no full token) | 401, 403 |
+| POST | `/api/tokens` | session JWT | 201 `{ ..., token }` (shown once) | 400, 401, 403 |
+| DELETE | `/api/tokens/:id` | session JWT | 200 `{ message }` (soft delete) | 401, 403, 404 |
+| POST | `/mcp` | token or access token | MCP JSON-RPC answer | 401 |
+| GET / DELETE | `/mcp` | token | – | 405 |
 | GET | `/api/health` | – | 200 all OK | 503 something down |
 | GET | `/api/auth/test-user` | – | 200 `{ email, password }` | 404 turned off |
 | GET | `/` | – | 200 "API is running" | – |

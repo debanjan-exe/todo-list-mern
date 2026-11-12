@@ -1,7 +1,7 @@
 // Shared task state for all pages.
 // It loads tasks from the API and gives functions to add, edit, delete and change status.
 // It also controls the Add/Edit sheet, so any page can open it.
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import * as api from '../api';
 
 const TaskContext = createContext(null);
@@ -66,7 +66,7 @@ export function TaskProvider({ children }) {
 
   // Small message at the bottom of the screen (for example an API error)
   const [toast, setToast] = useState('');
-  const notify = (message) => setToast(message);
+  const notify = useCallback((message) => setToast(message), []); // stable, safe in effect deps
   const closeToast = () => setToast('');
 
   // Confirm dialog. confirm() opens it and returns a Promise.

@@ -2,11 +2,14 @@
 // It does not connect to MongoDB or start listening (index.js does that),
 // so the app can also be used in tests.
 // Request flow: route -> controller (HTTP) -> service (rules) -> data (MongoDB queries)
+// MCP (/mcp) uses the same services: mcp/tools.js -> services -> data
 import express from 'express';
 import cors from 'cors';
 import taskRoutes from './routes/taskRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
+import tokenRoutes from './routes/tokenRoutes.js';
+import mcpRoutes from './routes/mcpRoutes.js';
 import requireAuth from './middleware/auth.js';
 import errorHandler from './middleware/errorHandler.js';
 
@@ -27,6 +30,12 @@ app.use('/api/auth', authRoutes);
 
 // Private: all task routes need a valid token (requireAuth runs first)
 app.use('/api/tasks', requireAuth, taskRoutes);
+
+// Private: personal access tokens for MCP clients (managed from the app)
+app.use('/api/tokens', requireAuth, tokenRoutes);
+
+// MCP endpoint for AI clients such as Claude (Bearer personal access token)
+app.use('/mcp', requireAuth, mcpRoutes);
 
 // Unknown routes -> 404
 app.use((req, res) => res.status(404).json({ message: 'Route not found' }));
