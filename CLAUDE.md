@@ -25,7 +25,7 @@ cd client && pnpm test                    # Vitest + React Testing Library (jsdo
 cd client && pnpm build                   # must pass before a commit
 ```
 
-Render installs with `pnpm install --frozen-lockfile --prod`. When you add a dependency, **commit the updated `pnpm-lock.yaml`**, or the deploy fails.
+Render runs `npm install -g pnpm@10 && pnpm install --frozen-lockfile --prod` (pnpm 10 pinned). When you add a dependency, **commit the updated `pnpm-lock.yaml`**, or the deploy fails.
 
 ## Server: strict layers
 
