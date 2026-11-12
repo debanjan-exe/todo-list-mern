@@ -53,7 +53,8 @@ export default function AuthLayout({ title, subtitle, children, onSubmit, submit
   return (
     <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', bgcolor: '#fff' }}>
       {/* Blue band (same style as Onboarding) */}
-      <Box sx={{ height: 120, bgcolor: colors.primary, position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+      {/* Height shrinks on short phones (iPhone SE) so Sign In fits without scrolling */}
+      <Box sx={{ height: 'clamp(64px, 13dvh, 120px)', bgcolor: colors.primary, position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
         <Box sx={{ position: 'absolute', top: -40, right: -40, width: 110, height: 110, borderRadius: '50%', border: '14px solid rgba(255,255,255,0.15)' }} />
         <Box component="svg" viewBox="0 0 80 50" sx={{ position: 'absolute', width: 80, bottom: 8, left: -8 }}>
           {[0, 10, 20].map((y) => (
@@ -63,7 +64,7 @@ export default function AuthLayout({ title, subtitle, children, onSubmit, submit
         </Box>
       </Box>
 
-      <Box component="form" noValidate onSubmit={handleSubmit} sx={{ flex: 1, px: 3, pt: 4, pb: 4, display: 'flex', flexDirection: 'column' }}>
+      <Box component="form" noValidate onSubmit={handleSubmit} sx={{ flex: 1, px: 3, pt: 3, pb: 'calc(24px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column' }}>
         <Typography sx={{ fontSize: 22, fontWeight: 600 }}>{title}</Typography>
         <Typography sx={{ fontSize: 12, color: '#6B6B70', mt: 1 }}>{subtitle}</Typography>
 
@@ -73,11 +74,11 @@ export default function AuthLayout({ title, subtitle, children, onSubmit, submit
 
         <Button type="submit" fullWidth variant="contained" disableElevation disabled={loading}
           startIcon={loading && <CircularProgress size={18} color="inherit" />}
-          sx={{ mt: 4, py: 1.5, borderRadius: '2px', fontSize: 14, '&.Mui-disabled': { bgcolor: colors.primary, color: '#fff', opacity: 0.8 } }}>
+          sx={{ mt: 3, py: 1.5, borderRadius: '2px', fontSize: 14, '&.Mui-disabled': { bgcolor: colors.primary, color: '#fff', opacity: 0.8 } }}>
           {loading ? 'Please wait...' : submitText}
         </Button>
 
-        <Typography sx={{ fontSize: 12, color: '#6B6B70', textAlign: 'center', mt: 3 }}>
+        <Typography sx={{ fontSize: 12, color: '#6B6B70', textAlign: 'center', mt: 2.5 }}>
           {footerText}{' '}
           <Box component={RouterLink} to={footerTo} sx={{ color: colors.primary, fontWeight: 500, textDecoration: 'none' }}>
             {footerLink}

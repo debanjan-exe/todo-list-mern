@@ -14,7 +14,7 @@ export default function AddFab({ date = null }) {
       onClick={() => openSheet(null, date)}
       sx={{
         position: 'fixed',
-        bottom: BOTTOM_NAV_HEIGHT + 16, // 16px above the nav bar
+        bottom: `calc(${BOTTOM_NAV_HEIGHT + 16}px + env(safe-area-inset-bottom))`, // 16px above the nav bar (and the iPhone home bar)
         left: '50%',
         transform: 'translateX(-50%)',
         width: 64,

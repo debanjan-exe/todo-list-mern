@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- maximum-scale=1 stops iOS Safari from zooming in when an input is tapped (inputs use 13px text).
+         Pinch-to-zoom still works on iOS. viewport-fit=cover enables env(safe-area-inset-*) for the home bar. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
 
     <!-- Page title + description (Google results and link previews) -->
     <title>To Do List – Plan your week, track progress</title>

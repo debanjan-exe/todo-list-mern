@@ -19,9 +19,10 @@ export default function Onboarding() {
   const navigate = useNavigate();
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#fff' }}>
-      {/* Blue area */}
-      <Box sx={{ flex: 1, minHeight: '60vh', bgcolor: colors.primary, position: 'relative', overflow: 'hidden' }}>
+    // Exactly one screen tall (100dvh = the visible height, also on iPhone), so the page never scrolls.
+    <Box sx={{ height: '100dvh', display: 'flex', flexDirection: 'column', bgcolor: '#fff', overflow: 'hidden' }}>
+      {/* Blue area: takes all the space the text and button do not need */}
+      <Box sx={{ flex: 1, minHeight: 0, bgcolor: colors.primary, position: 'relative', overflow: 'hidden' }}>
         {/* circle at the top right */}
         <Box sx={{ position: 'absolute', top: -40, right: -40, width: 110, height: 110, borderRadius: '50%', border: '14px solid rgba(255,255,255,0.15)' }} />
         <ZigZag sx={{ top: '12%', left: -10 }} />
@@ -29,13 +30,14 @@ export default function Onboarding() {
       </Box>
 
       {/* Text + button */}
-      <Box sx={{ px: 3, pt: 4, pb: 5 }}>
+      {/* pb adds the iPhone home-bar space (safe area) under the button */}
+      <Box sx={{ px: 3, pt: 4, pb: 'calc(40px + env(safe-area-inset-bottom))', flexShrink: 0 }}>
         <Typography sx={{ fontSize: 22, fontWeight: 600 }}>Manage What To Do</Typography>
         <Typography sx={{ fontSize: 12, color: '#6B6B70', mt: 1.5, maxWidth: 260, lineHeight: 1.7 }}>
           The best way to manage what you have to do, don't forget your plans
         </Typography>
         <Button fullWidth variant="contained" disableElevation onClick={() => navigate('/signin')}
-          sx={{ mt: 6, py: 1.5, borderRadius: '2px', fontSize: 14 }}>
+          sx={{ mt: 5, py: 1.5, borderRadius: '2px', fontSize: 14 }}>
           Get Started
         </Button>
       </Box>

@@ -8,7 +8,8 @@ import { BOTTOM_NAV_HEIGHT } from './BottomNav';
 
 export default function ScreenLayout({ header, children, bottomSpace = 12, pt = 3 }) {
   return (
-    <Box sx={{ height: `calc(100dvh - ${BOTTOM_NAV_HEIGHT}px)`, display: 'flex', flexDirection: 'column', px: 2.5, pt }}>
+    // Height = visible screen - bottom nav - iPhone home bar (safe area)
+    <Box sx={{ height: `calc(100dvh - ${BOTTOM_NAV_HEIGHT}px - env(safe-area-inset-bottom))`, display: 'flex', flexDirection: 'column', px: 2.5, pt }}>
       {/* Fixed top part */}
       <Box sx={{ flexShrink: 0 }}>{header}</Box>
 
