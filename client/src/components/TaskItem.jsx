@@ -11,11 +11,13 @@ import { colors } from '../theme';
 
 const PRIORITY_COLOR = { Low: '#4CAF50', Medium: '#F5A623', High: '#E35D5D' };
 const SWIPE_WIDTH = 80; // width of the hidden "Delete" button
+const SWIPE_GAP = 16; // space between the edit icon and the Delete button when open
+const SWIPE_OPEN = SWIPE_WIDTH + SWIPE_GAP; // how far the row moves left when open
 
 export default function TaskItem({ task, showDate = false }) {
   const { toggleStatus, removeTask, openSheet, openDetails, notify, confirm } = useTasks();
   const [busy, setBusy] = useState(null); // 'toggle' | 'delete' | null -> shows a spinner
-  const [offset, setOffset] = useState(0); // how far the row moved left (0 to -80)
+  const [offset, setOffset] = useState(0); // how far the row moved left (0 to -96)
   const [dragging, setDragging] = useState(false);
   const startX = useRef(0);
   const done = task.status === 'Completed';
@@ -27,11 +29,11 @@ export default function TaskItem({ task, showDate = false }) {
   };
   const onTouchMove = (e) => {
     const diff = e.touches[0].clientX - startX.current;
-    setOffset(Math.max(-SWIPE_WIDTH, Math.min(0, diff))); // only move left, max 80px
+    setOffset(Math.max(-SWIPE_OPEN, Math.min(0, diff))); // only move left, max 96px
   };
   const onTouchEnd = () => {
     setDragging(false);
-    setOffset(offset < -SWIPE_WIDTH / 2 ? -SWIPE_WIDTH : 0); // snap open or closed
+    setOffset(offset < -SWIPE_OPEN / 2 ? -SWIPE_OPEN : 0); // snap open or closed
   };
 
   // Run an API action, show a spinner while it runs, show a message if it fails

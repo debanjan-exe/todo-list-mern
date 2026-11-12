@@ -270,7 +270,12 @@ todo-app/
 
 ## 6. API
 
-Base URL: `http://localhost:5000/api`
+| Where | Base URL |
+|---|---|
+| **Live** (Render) | `https://todo-list-api-1n6q.onrender.com/api` |
+| Local (`pnpm dev` in `server`) | `http://localhost:5000/api` |
+
+Quick check: [`/api/health`](https://todo-list-api-1n6q.onrender.com/api/health)
 
 **Status (public)**
 
@@ -303,14 +308,20 @@ Base URL: `http://localhost:5000/api`
 Errors: `400` invalid data · `401` not signed in (or account deleted) · `403` not allowed · `404` unknown, deleted or another user's task · `409` email already used · `500` server error. All errors are `{ "message": "..." }`.
 
 ```bash
-# 1. sign up (or sign in) and copy the token
-curl -X POST http://localhost:5000/api/auth/signup -H "Content-Type: application/json" \
-  -d '{"name":"Deb","email":"deb@example.com","password":"secret123"}'
+# Use the live API (or API=http://localhost:5000/api when running locally)
+API=https://todo-list-api-1n6q.onrender.com/api
+
+# 1. sign in with the test account (or /auth/signup for a new one) and copy the token
+curl -X POST $API/auth/signin -H "Content-Type: application/json" \
+  -d '{"email":"test@todo.app","password":"Test@1234"}'
 
 # 2. use the token
-curl -X POST http://localhost:5000/api/tasks -H "Content-Type: application/json" \
+curl -X POST $API/tasks -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{"title":"Finishing Wireframe","dateTime":"2026-11-12T09:00","priority":"High"}'
+
+# 3. list your tasks
+curl $API/tasks -H "Authorization: Bearer <token>"
 ```
 
 ---
