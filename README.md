@@ -1,14 +1,62 @@
+<div align="center">
+
+<img src="client/public/og-image.jpg" alt="To Do List – plan your week, track progress" width="100%" />
+
 # To-Do List App (MERN)
+
+**Plan your week, track progress, and get things done.**
+
+[![Live app](https://img.shields.io/badge/Live_app-Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://todo-list-mern01.netlify.app/)
+[![API status](https://img.shields.io/badge/API_health-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://todo-list-api-1n6q.onrender.com/api/health)
+
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
+![React](https://img.shields.io/badge/React_18-61DAFB?logo=react&logoColor=black)
+![Node.js](https://img.shields.io/badge/Node.js_22-5FA04E?logo=nodedotjs&logoColor=white)
+![MUI](https://img.shields.io/badge/MUI-007FFF?logo=mui&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
+![Vitest](https://img.shields.io/badge/unit_tests-80-6E9F18?logo=vitest&logoColor=white)
+![JWT](https://img.shields.io/badge/auth-JWT_+_bcrypt-000000?logo=jsonwebtokens&logoColor=white)
+![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)
+
+</div>
 
 A mobile-first To-Do List app built with **MongoDB, Express, React and Node.js**.
 Users **sign up / sign in**, then create, view, edit, delete, search and complete **their own** tasks. Tasks are grouped by week (Monday to Sunday), and each week shows how many tasks are open and how many are completed.
 
 The UI follows the Figma design (Onboarding, Home, Add New Task, Search).
 
-- **Live app:** `<your Netlify URL>`
-- **API:** `<your Render URL>`
-- **Figma:** [To-Do List Mobile app](https://www.figma.com/design/mz2PJoTwa5DxYrdrFPem3f/To-Do-List-Mobile-app?node-id=0-1)
-- More detail: [`server/README.md`](server/README.md) · [`client/README.md`](client/README.md)
+| | Link |
+|---|---|
+| 🌐 **Live app** | https://todo-list-mern01.netlify.app |
+| ⚙️ **API** | https://todo-list-api-1n6q.onrender.com |
+| 💚 **API health** | https://todo-list-api-1n6q.onrender.com/api/health |
+| 🎨 **Figma** | [To-Do List Mobile app](https://www.figma.com/design/mz2PJoTwa5DxYrdrFPem3f/To-Do-List-Mobile-app?node-id=0-1) |
+| 📚 **More detail** | [`server/README.md`](server/README.md) · [`client/README.md`](client/README.md) |
+
+> **Try it:** open the live app. The Sign In screen fills in the test account (`test@todo.app` / `Test@1234`), so you can tap **Sign In** at once.
+> The API is on Render's free plan, so the **first** request after a quiet period can take up to about 50 seconds. The startup screen shows this and tries again by itself.
+
+<p align="center">
+  <img src="docs/screenshots/17-startup-ready.png" width="19%" alt="Startup screen" />
+  <img src="docs/screenshots/02-home.png" width="19%" alt="Home" />
+  <img src="docs/screenshots/03-task-details.png" width="19%" alt="Task details" />
+  <img src="docs/screenshots/06-time-picker.png" width="19%" alt="Time picker" />
+  <img src="docs/screenshots/14-profile.png" width="19%" alt="Profile" />
+</p>
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U["📱 Browser"] -->|"loads the app"| N["Netlify<br/>React + Vite + MUI"]
+    U -->|"REST + JWT"| RT
+    subgraph R ["Render · Node + Express API"]
+      direction LR
+      RT[routes] --> C[controllers] --> S[services] --> D[data]
+    end
+    D -->|Mongoose| M[("MongoDB Atlas<br/>users · tasks")]
+```
 
 ---
 
@@ -28,6 +76,7 @@ The UI follows the Figma design (Onboarding, Home, Add New Task, Search).
 | Fully responsive mobile UI | At phone width the app fills the screen. On a large screen it shows in the middle, at phone width. |
 
 Extra features:
+- **Shareable link:** favicon, app icons, a description and a link-preview image (Open Graph and X/Twitter tags), so the link shows a card in WhatsApp, Slack, LinkedIn and X.
 - **Startup screen:** at app start, a loading screen checks `GET /api/health` (server, MongoDB ping, sign in, test account) and shows each check live. If something is down, it shows why and tries again every 5 s. It runs **once per browser session** (saved in `sessionStorage`): reloads in the same tab skip it.
 - **Test account:** on every server start, the server makes sure **one** test user exists. The Sign In screen fills it in.
 - **"Something went wrong" page:** if a screen crashes, an error boundary shows a friendly page with **Try again** and **Go to Home**.
@@ -178,7 +227,13 @@ todo-app/
 │   │       ├── TaskSkeleton.jsx, icons.jsx, BackHeader.jsx, MobileFrame.jsx, PickerField.jsx
 │   │       └── pickers/                 # TimeSheet, DateSheet, WheelColumn, QuickChips, DialogParts
 │   ├── tests/                           # setup.js, renderWithProviders.jsx, unit/*.test.js(x)
-│   ├── public/_redirects                # Netlify: send all routes to index.html
+│   ├── index.html                       # Title, description, favicon, Open Graph / X preview tags
+│   ├── public/
+│   │   ├── _redirects                   # Netlify: send all routes to index.html
+│   │   ├── favicon.svg, favicon-32.png  # Browser tab icon
+│   │   ├── apple-touch-icon.png, icon-192.png, icon-512.png  # Home-screen icons
+│   │   ├── site.webmanifest             # App name, icons, theme color ("Add to Home Screen")
+│   │   └── og-image.jpg                 # 1200×630 link-preview image (63 KB)
 │   ├── .env.example
 │   ├── package.json
 │   └── pnpm-lock.yaml
@@ -312,6 +367,23 @@ Client saves the token (localStorage) ─▶ api.js adds "Authorization: Bearer 
 
 Security notes: passwords are stored only as bcrypt hashes. Sign in gives the same message for an unknown email and a wrong password. The client cannot set `user` on a task. In production, use a long random `JWT_SECRET`. A safer store than localStorage is an httpOnly cookie (a possible improvement).
 
+### Request flow (sequence)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant App as React app
+    participant API as Express API
+    participant DB as MongoDB
+    User->>App: Tap checkbox on a task
+    App->>API: PUT /api/tasks/:id { status } + Bearer token
+    API->>API: requireAuth → verify JWT, account active
+    API->>DB: findOneAndUpdate({ _id, user, isDeleted: false })
+    DB-->>API: updated task
+    API-->>App: 200 task
+    App-->>User: Checkbox, counts and progress bar update
+```
+
 ### Client: data flow
 ```
 User taps the checkbox
@@ -375,18 +447,38 @@ Open http://localhost:5173 and use the browser's mobile view (DevTools → devic
 1. **New → Web Service**, then connect the GitHub repo.
 2. Root directory: `server`. Build: `npm install -g pnpm && pnpm install --frozen-lockfile --prod`. Start: `pnpm start`.
 3. Environment: `MONGO_URI=...`, `JWT_SECRET=<long random string>`, `CLIENT_URL=<Netlify URL>` (or `*`). For a public demo keep `TEST_USER_ENABLED=true`; for real users set it to `false`.
-4. Copy the service URL, for example `https://todo-api.onrender.com`.
+4. Copy the service URL. Live: `https://todo-list-api-1n6q.onrender.com`.
 5. Health check path for Render: `/api/health`.
 
 ### c) Frontend – Netlify
 1. **Add new site → Import from Git**.
 2. Base directory: `client`. Build command: `pnpm build`. Publish directory: `client/dist`.
-3. Environment: `VITE_API_URL=https://todo-api.onrender.com/api`.
+3. Environment: `VITE_API_URL=https://todo-list-api-1n6q.onrender.com/api`, `NODE_VERSION=22`. Live: `https://todo-list-mern01.netlify.app`.
 4. Deploy. `public/_redirects` makes page refresh work on `/home`, `/weeks` and `/search`.
 
 > The free Render plan sleeps after inactivity. The first request can take about 30 seconds.
 
 ---
+
+### d) Sharing & SEO (link preview)
+
+When the link is pasted in WhatsApp, Slack, LinkedIn, X or iMessage, it shows a card:
+
+<img src="client/public/og-image.jpg" alt="Link preview image" width="480" />
+
+| What | Where | Why |
+|---|---|---|
+| Title + `description` | `client/index.html` | Text in Google results and in link cards |
+| Favicon (SVG + 32 px PNG) | `public/favicon.svg`, `favicon-32.png` | Browser tab and bookmarks |
+| `apple-touch-icon` (180 px), 192 / 512 px icons + `site.webmanifest` | `public/` | Home-screen icon on iPhone / Android, app name, blue `theme-color` |
+| Open Graph tags (`og:title`, `og:description`, `og:image` 1200×630, `og:url`) | `client/index.html` | The card in WhatsApp, Slack, LinkedIn, Facebook |
+| `twitter:card = summary_large_image` | `client/index.html` | The large card on X |
+
+Notes:
+- `og:image` and `og:url` must be **full URLs** (`https://todo-list-mern01.netlify.app/...`). If the site name changes, update them in `client/index.html`.
+- The image is a **JPEG under 100 KB**: WhatsApp skips preview images that are too big (about 300 KB or more).
+- Apps **cache** previews. To see a new one, share the link with a new ending (for example `?v=2`), or refresh it with LinkedIn's Post Inspector. To check all platforms at once: opengraph.xyz.
+- `_redirects` does not hide these files: Netlify serves real files (like `/og-image.jpg`) before the `/* → /index.html` rule.
 
 ## 10. Tests
 

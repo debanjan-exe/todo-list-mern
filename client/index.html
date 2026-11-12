@@ -2,8 +2,49 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>To Do List</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Page title + description (Google results and link previews) -->
+    <title>To Do List – Plan your week, track progress</title>
+    <meta
+      name="description"
+      content="A simple to-do app to plan your week: add tasks with date, time and priority, track weekly progress, search, and mark tasks done."
+    />
+    <meta name="theme-color" content="#4B66E1" />
+
+    <!-- Favicon + app icons (files in public/) -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!--
+      Link preview when the URL is shared (WhatsApp, Slack, LinkedIn, X, iMessage ...).
+      og:image and og:url must be FULL urls. If the site URL changes, update them here.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="To Do List" />
+    <meta property="og:title" content="To Do List – Plan your week, track progress" />
+    <meta
+      property="og:description"
+      content="Add tasks with date, time and priority, see your weekly progress, search, and get things done."
+    />
+    <meta property="og:url" content="https://todo-list-mern01.netlify.app/" />
+    <meta property="og:image" content="https://todo-list-mern01.netlify.app/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="To Do List app: weekly progress and today's tasks on a phone" />
+
+    <!-- X (Twitter) uses its own tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="To Do List – Plan your week, track progress" />
+    <meta
+      name="twitter:description"
+      content="Add tasks with date, time and priority, see your weekly progress, search, and get things done."
+    />
+    <meta name="twitter:image" content="https://todo-list-mern01.netlify.app/og-image.jpg" />
+
     <!-- Poppins is the font used in the Figma design -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
