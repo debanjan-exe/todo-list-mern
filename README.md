@@ -162,7 +162,7 @@ Onboarding ─Get Started─▶ Sign In ◀──▶ Sign Up
 |---|---|---|---|
 | ![](docs/screenshots/05-form-errors.png) | ![](docs/screenshots/06-time-picker.png) | ![](docs/screenshots/07-date-picker.png) | ![](docs/screenshots/08-confirm-delete.png) |
 
-| Swipe to delete | All Weeks | Search | Sign In |
+| Swipe to delete | All Weeks | Search | Sign In (wrong password) |
 |---|---|---|---|
 | ![](docs/screenshots/09-swipe-delete.png) | ![](docs/screenshots/10-all-weeks.png) | ![](docs/screenshots/11-search.png) | ![](docs/screenshots/12-sign-in.png) |
 
